@@ -12,7 +12,7 @@ def connect_to(chain):
     if chain == 'source':
         api_url = "https://api.avax-test.network/ext/bc/C/rpc"
     elif chain == 'destination':
-        api_url = "https://data-seed-prebsc-1-s1.binance.org:8545/"
+        api_url = "https://bsc-testnet.publicnode.com"
     else:
         raise ValueError(f"Invalid chain: {chain}")
 
