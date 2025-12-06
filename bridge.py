@@ -41,7 +41,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
 
     latest_block = w3.eth.block_number
-    from_block = max(latest_block - 4, 0)
+    from_block = max(latest_block - 10, 0)
     to_block = latest_block
 
     events_list = []
@@ -60,10 +60,10 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
     if chain == "source":
         logs = w3.eth.get_logs({
-            "fromBlock": hex(from_block),
-            "toBlock": hex(to_block),
+            "fromBlock": from_block,
+            "toBlock": to_block,
             "address": contract_address,
-            "topics": [deposit_topic]
+            "topics": [unwrap_topic]
         })
 
         deposit_events = []
@@ -128,12 +128,19 @@ def handle_deposits(events, contract_info="contract_info.json"):
 
     nonce = w3_dest.eth.get_transaction_count(account_address)
 
-    for ev in events:
+    # IMPORTANT: process events in deterministic order
+    for ev in sorted(events, key=lambda e: e.blockNumber):
         args = ev['args']
+
+        # Adjust these names to **match your event ABI**
+        underlying_token = args['underlying_token']
+        recipient = args['to']
+        amount = args['amount']
+
         tx = contract_dest.functions.wrap(
-            args['token'],
-            args['recipient'],
-            args['amount']
+            underlying_token,
+            recipient,
+            amount
         ).build_transaction({
             'chainId': w3_dest.eth.chain_id,
             'gas': 2000000,
@@ -146,6 +153,7 @@ def handle_deposits(events, contract_info="contract_info.json"):
         print(f"Wrap transaction sent with hash: {tx_hash.hex()}")
 
         nonce += 1
+
 
 
 def handle_unwraps(events, contract_info="contract_info.json"):
