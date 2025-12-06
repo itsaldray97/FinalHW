@@ -45,7 +45,15 @@ contract Destination is AccessControl {
 		emit Unwrap(underlyingAddress, _wrapped_token, msg.sender, _recipient, _amount);
 	}
 
-	function createToken(address _underlying_token, string memory name, string memory symbol )
+function registerToken(address _underlying_token)
+    public
+    onlyRole(CREATOR_ROLE)
+    returns (address)
+{
+    return createToken(_underlying_token, "Wrapped", "w");
+}
+
+function createToken(address _underlying_token, string memory name, string memory symbol)
     public
     onlyRole(CREATOR_ROLE)
     returns(address)
@@ -53,18 +61,11 @@ contract Destination is AccessControl {
     require(_underlying_token != address(0), "Invalid underlying token");
     require(wrapped_tokens[_underlying_token] == address(0), "Token already exists");
 
-    // Read metadata from underlying ERC20
-    string memory underlyingName = ERC20(_underlying_token).name();
-    string memory underlyingSymbol = ERC20(_underlying_token).symbol();
-
-    // Correct constructor args:
-    // 1. owner     → admin (DEFAULT_ADMIN_ROLE)
-    // 2. source    → this Destination contract
-    // 3. underlying→ the real token
     BridgeToken token = new BridgeToken(
-        msg.sender,        // owner of wrapped token
-        address(this),     // source (bridge)
-        _underlying_token  // underlying ERC20
+        _underlying_token,
+        name,
+        symbol,
+        address(this)
     );
 
     wrapped_tokens[_underlying_token] = address(token);
