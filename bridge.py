@@ -135,7 +135,7 @@ def handle_deposits(event, contract_info="contract_info.json"):
     })
 
     signed_tx = w3_dest.eth.account.sign_transaction(tx, private_key=private_key)
-    tx_hash = w3_dest.eth.send_raw_transaction(signed_tx.rawTransaction)
+    tx_hash = w3_dest.eth.send_raw_transaction(signed_tx.raw_transaction)
     print(f"Wrap transaction sent with hash: {tx_hash.hex()}")
 
 
@@ -166,5 +166,5 @@ def handle_unwraps(event, contract_info="contract_info.json"):
     })
 
     signed_tx = w3_source.eth.account.sign_transaction(tx, private_key=private_key)
-    tx_hash = w3_source.eth.send_raw_transaction(signed_tx.rawTransaction)
+    tx_hash = w3_source.eth.send_raw_transaction(signed_tx.raw_transaction)
     print(f"Withdraw transaction sent with hash: {tx_hash.hex()}")
