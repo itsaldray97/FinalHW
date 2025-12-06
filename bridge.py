@@ -65,31 +65,50 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
     events_list = []
 
-    # ----- SOURCE: look for Deposit events and call wrap on destination -----
-    if chain == 'source':
-        # get_logs is cleaner than processing every tx receipt
-        deposit_events = contract.events.Deposit().getLogs({
+    from_block = latest_block - 4
+    to_block = latest_block
+
+    deposit_topic = w3.keccak(text="Deposit(address,address,uint256)").hex()
+    unwrap_topic = w3.keccak(text="Unwrap(address,address,uint256)").hex()
+
+    if chain == "source":
+        logs = w3.eth.get_logs({
             "fromBlock": from_block,
-            "toBlock": to_block
+            "toBlock": to_block,
+            "address": contract_address,
+            "topics": [deposit_topic]
         })
 
-        # Call wrap() on destination for each Deposit
-        if deposit_events:
-            handle_deposits(deposit_events, contract_info)
-
-        # Also build a DataFrame of what we saw (for debugging/return value)
-        for ev in deposit_events:
-            args = ev['args']
+        for log in logs:
+            event = contract.events.Deposit().process_log(log)
             events_list.append({
                 'event': 'Deposit',
-                'blockNumber': ev['blockNumber'],
-                'transactionHash': ev['transactionHash'].hex(),
-                'token': args['token'],
-                'recipient': args['recipient'],
-                'amount': args['amount'],
-                'timestamp': datetime.fromtimestamp(
-                    w3.eth.get_block(ev['blockNumber']).timestamp
-                )
+                'blockNumber': event.blockNumber,
+                'transactionHash': event.transactionHash.hex(),
+                'amount': event.args['amount'],
+                'token': event.args['token'],
+                'recepient': event.args['recipient'],
+                'timestamp': datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
+            })
+
+    elif chain == "destination":
+        logs = w3.eth.get_logs({
+            "fromBlock": from_block,
+            "toBlock": to_block,
+            "address": contract_address,
+            "topics": [unwrap_topic]
+        })
+
+        for log in logs:
+            event = contract.events.Unwrap().process_log(log)
+            events_list.append({
+                'event': 'Unwrap',
+                'blockNumber': event.blockNumber,
+                'transactionHash': event.transactionHash.hex(),
+                'amount': event.args['amount'],
+                'token': event.args['token'],
+                'recepient': event.args['recipient'],
+                'timestamp': datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
             })
 
     # ----- DESTINATION: look for Unwrap events and call withdraw on source -----
