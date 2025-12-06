@@ -99,6 +99,16 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             ev = contract.events.Unwrap().process_log(log)
             unwrap_events.append(ev)
 
+            # append inside the loop
+            events_list.append({
+                "event": "Unwrap",
+                "blockNumber": ev.blockNumber,
+                "transactionHash": ev.transactionHash.hex(),
+                "amount": ev.args["amount"],
+                "underlying_token": ev.args["underlying_token"],
+                "to": ev.args["to"],
+            })
+
         if unwrap_events:
             handle_unwraps(unwrap_events, contract_info)
 
@@ -121,7 +131,7 @@ def handle_deposits(events, contract_info="contract_info.json"):
 
     nonce = w3_dest.eth.get_transaction_count(sender)
 
-    for ev in sorted(events, key=lambda e: e.blockNumber):
+    for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
         args = ev["args"]
 
         token = args["token"]
@@ -157,9 +167,8 @@ def handle_unwraps(events, contract_info="contract_info.json"):
 
     nonce = w3_src.eth.get_transaction_count(account)
 
-    for ev in events:
+    for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
         args = ev["args"]
-
         underlying = args["underlying_token"]
         recipient = args["to"]
         amount = args["amount"]
