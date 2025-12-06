@@ -44,21 +44,20 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
     events_list = []
 
-    # Event signature topics
-    DEPOSIT_TOPIC = "0x" + w3.keccak(
+    DEPOSIT_TOPIC = w3.keccak(
         text="Deposit(address,address,uint256)"
+    ).hex()
+
+    WITHDRAWAL_TOPIC = w3.keccak(
+        text="Withdrawal(address,address,uint256)"
+    ).hex()
+
+    WRAP_TOPIC = w3.keccak(
+        text="Wrap(address,address,address,uint256)"
     ).hex()
 
     UNWRAP_TOPIC = w3.keccak(
         text="Unwrap(address,address,address,address,uint256)"
-    ).hex()
-
-    WITHDRAWAL_TOPIC = "0x" + w3.keccak(
-        text="Withdrawal(address,address,uint256)"
-    ).hex()
-
-    WRAP_TOPIC = "0x" + w3.keccak(
-        text="Wrap(address,address,uint256)"
     ).hex()
 
     # ------------------------------------------------------------
