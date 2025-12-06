@@ -142,7 +142,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
                 "block": ev.blockNumber,
                 "underlying_token": ev.args["underlying_token"],
                 "wrapped_token": ev.args["wrapped_token"],
-                "sender": ev.args["from"],
+                "sender": ev.args["frm"],
                 "to": ev.args["to"],
                 "amount": ev.args["amount"],
                 "tx": ev.transactionHash.hex(),
