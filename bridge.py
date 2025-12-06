@@ -39,7 +39,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     contract = w3.eth.contract(address=contract_address, abi=cdata['abi'])
 
     latest_block = w3.eth.block_number
-    from_block = max(latest_block - 8, 0)
+    from_block = max(latest_block - 20, 0)
     to_block = latest_block
 
     events_list = []
