@@ -48,8 +48,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         return datetime.fromtimestamp(block_ts_cache[blocknum])
 
     # Correct event signatures
-    DEPOSIT_TOPIC = w3.keccak(text="Deposit(address,address,address,uint256)").hex()
-    UNWRAP_TOPIC = w3.keccak(text="Unwrap(address,address,uint256)").hex()
+    DEPOSIT_TOPIC = "0x" + w3.keccak(text="Deposit(address,address,address,uint256)").hex()
+    UNWRAP_TOPIC = "0x" + w3.keccak(text="Unwrap(address,address,uint256)").hex()
 
     # ============================================================
     #                SOURCE CHAIN → WRAP() CALL
