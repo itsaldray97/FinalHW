@@ -109,8 +109,8 @@ def handle_deposits(event, contract_info="contract_info.json"):
         contract_abi_dest = json.load(abi_file)
     contract_dest = w3_dest.eth.contract(address=contract_address_dest, abi=contract_abi_dest)
 
-    private_key = "Ljwwq3PumQYtuDj6uNEMsv9ReQJihhwLGLMFThZVVUP5SE6lJkxYaQ"
-    account_address = "8e1c7f119b75474796d0170dd035522a"
+    private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
+    account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
     nonce = w3_dest.eth.get_transaction_count(account_address)
 
@@ -140,8 +140,8 @@ def handle_unwraps(event, contract_info="contract_info.json"):
         contract_abi_source = json.load(abi_file)
     contract_source = w3_source.eth.contract(address=contract_address_source, abi=contract_abi_source)
 
-    private_key = "Ljwwq3PumQYtuDj6uNEMsv9ReQJihhwLGLMFThZVVUP5SE6lJkxYaQ"
-    account_address = "8e1c7f119b75474796d0170dd035522a"
+    private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
+    account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
     nonce = w3_source.eth.get_transaction_count(account_address)
 
