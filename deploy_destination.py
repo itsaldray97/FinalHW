@@ -5,7 +5,7 @@ import sys
 # ---------------------------
 # BNB TESTNET RPC
 # ---------------------------
-RPC = "https://data-seed-prebsc-1-s1.binance.org:8545/"
+RPC = "https://bsc-testnet.publicnode.com"
 CHAIN_ID = 97  # BSC Testnet Chain ID
 
 PRIVATE_KEY = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
