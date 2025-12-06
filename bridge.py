@@ -78,12 +78,16 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     #                DESTINATION CHAIN – detect UNWRAPS
     # ============================================================
     else:
-        logs = w3.eth.get_logs({
-            "fromBlock": from_block,      # ✔ FIXED
-            "toBlock": to_block,          # ✔ FIXED
-            "address": contract_address,
-            "topics": [UNWRAP_TOPIC]
-        })
+        try:
+            logs = w3.eth.get_logs({
+                "fromBlock": max(latest - 5, 0),  # safer window
+                "toBlock": latest,
+                "address": contract_address,
+                "topics": [UNWRAP_TOPIC]
+            })
+        except Exception as e:
+            print("No unwrap events or RPC limit reached:", e)
+            return pd.DataFrame([])
 
         unwrap_events = []
 
@@ -109,11 +113,10 @@ def handle_deposits(events, contract_info="contract_info.json"):
     )
 
     private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
-    account = "0xB7131d4417d84025BAD139949D183398c2cf0916"
+    sender = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
-    nonce = w3_dest.eth.get_transaction_count(account)
+    nonce = w3_dest.eth.get_transaction_count(sender)
 
-    # Process in deterministic order
     for ev in sorted(events, key=lambda e: e.blockNumber):
         args = ev["args"]
 
@@ -128,8 +131,8 @@ def handle_deposits(events, contract_info="contract_info.json"):
             "nonce": nonce
         })
 
-        signed = w3_dest.eth.account.sign_transaction(tx, private_key)
-        tx_hash = w3_dest.eth.send_raw_transaction(signed.raw_transaction)
+        signed_tx = w3_dest.eth.account.sign_transaction(tx, private_key)
+        tx_hash = w3_dest.eth.send_raw_transaction(signed_tx.raw_transaction)
         print("Wrap transaction:", tx_hash.hex())
         nonce += 1
 
