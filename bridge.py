@@ -68,13 +68,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     from_block = latest_block - 4
     to_block = latest_block
 
-    deposit_topic = w3.keccak(text="Deposit(address,address,uint256)").hex()
-    unwrap_topic = w3.keccak(text="Unwrap(address,address,uint256)").hex()
+    deposit_topic = "0x" + w3.keccak(text="Deposit(address,address,uint256)").hex()
+    unwrap_topic = "0x" + w3.keccak(text="Unwrap(address,address,uint256)").hex()
 
     if chain == "source":
         logs = w3.eth.get_logs({
-            "fromBlock": from_block,
-            "toBlock": to_block,
+            "fromBlock": hex(from_block),
+            "toBlock": hex(to_block),
             "address": contract_address,
             "topics": [deposit_topic]
         })
@@ -82,19 +82,19 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         for log in logs:
             event = contract.events.Deposit().process_log(log)
             events_list.append({
-                'event': 'Deposit',
-                'blockNumber': event.blockNumber,
-                'transactionHash': event.transactionHash.hex(),
-                'amount': event.args['amount'],
-                'token': event.args['token'],
-                'recepient': event.args['recipient'],
-                'timestamp': datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
+                "event": "Deposit",
+                "blockNumber": event.blockNumber,
+                "transactionHash": event.transactionHash.hex(),
+                "amount": event.args["amount"],
+                "token": event.args["token"],
+                "recepient": event.args["recipient"],
+                "timestamp": datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
             })
 
     elif chain == "destination":
         logs = w3.eth.get_logs({
-            "fromBlock": from_block,
-            "toBlock": to_block,
+            "fromBlock": hex(from_block),
+            "toBlock": hex(to_block),
             "address": contract_address,
             "topics": [unwrap_topic]
         })
@@ -102,13 +102,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         for log in logs:
             event = contract.events.Unwrap().process_log(log)
             events_list.append({
-                'event': 'Unwrap',
-                'blockNumber': event.blockNumber,
-                'transactionHash': event.transactionHash.hex(),
-                'amount': event.args['amount'],
-                'token': event.args['token'],
-                'recepient': event.args['recipient'],
-                'timestamp': datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
+                "event": "Unwrap",
+                "blockNumber": event.blockNumber,
+                "transactionHash": event.transactionHash.hex(),
+                "amount": event.args["amount"],
+                "token": event.args["token"],
+                "recepient": event.args["recipient"],
+                "timestamp": datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
             })
 
     # ----- DESTINATION: look for Unwrap events and call withdraw on source -----
