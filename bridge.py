@@ -62,7 +62,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             "fromBlock": from_block,
             "toBlock": to_block,
             "address": contract_address,
-            "topics": [DEPOSIT_TOPIC]     # ✔ FIXED
+            "topics": [DEPOSIT_TOPIC, None, None]
         })
 
         deposit_events = []
@@ -80,10 +80,14 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     else:
         try:
             logs = w3.eth.get_logs({
-                "fromBlock": max(latest - 5, 0),  # safer window
-                "toBlock": latest,
+                "fromBlock": from_block,
+                "toBlock": to_block,
                 "address": contract_address,
-                "topics": [UNWRAP_TOPIC]
+                "topics": [
+                    UNWRAP_TOPIC,
+                    None,
+                    None
+                ]
             })
         except Exception as e:
             print("No unwrap events or RPC limit reached:", e)
