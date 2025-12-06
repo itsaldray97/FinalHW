@@ -215,6 +215,7 @@ def handle_deposits(events, contract_info="contract_info.json"):
 # ------------------------------------------------------------
 def handle_unwraps(events, contract_info="contract_info.json"):
     w3 = connect_to("source")
+
     cdata = get_contract_info("source", contract_info)
     src = w3.eth.contract(
         address=Web3.to_checksum_address(cdata["address"]),
@@ -228,7 +229,7 @@ def handle_unwraps(events, contract_info="contract_info.json"):
 
     for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
 
-
+        # MUST MATCH THE DESTINATION UNWRAP EVENT ABI
         underlying_token = ev.args["underlying_token"]
         recipient = ev.args["to"]
         amount = ev.args["amount"]
