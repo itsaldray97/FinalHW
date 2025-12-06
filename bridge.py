@@ -163,6 +163,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         for log in logs2:
             ev = contract.events.Wrap().process_log(log)
             wraps.append(ev)
+            print("EV IS:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + ev)
             events_list.append({
                 "event": "Wrap",
                 "block": ev.blockNumber,
