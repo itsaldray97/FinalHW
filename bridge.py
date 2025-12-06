@@ -51,7 +51,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     ).hex()
 
     UNWRAP_TOPIC = "0x" + w3.keccak(
-        text="Withdraw(address,address,uint256)"
+        text="unwrap(address,address,uint256)"
     ).hex()
 
     # ============================================================
