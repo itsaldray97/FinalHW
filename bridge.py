@@ -8,16 +8,19 @@ import pandas as pd
 
 def connect_to(chain):
     if chain == 'source':  # The source contract chain is avax
-        api_url = f"https://api.avax-test.network/ext/bc/C/rpc"  # AVAX C-chain testnet
+        api_url = "https://api.avax-test.network/ext/bc/C/rpc"  # AVAX C-chain testnet
 
     if chain == 'destination':  # The destination contract chain is bsc
-        api_url = f"https://data-seed-prebsc-1-s1.binance.org:8545/"  # BSC testnet
+        api_url = "https://data-seed-prebsc-1-s1.binance.org:8545/"  # BSC testnet
 
     if chain in ['source', 'destination']:
         w3 = Web3(Web3.HTTPProvider(api_url))
         # inject the poa compatibility middleware to the innermost layer
         w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
-    return w3
+        return w3
+
+    # fall-through for invalid chain
+    raise ValueError(f"Invalid chain: {chain}")
 
 
 def get_contract_info(chain, contract_info):
@@ -49,53 +52,61 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         print(f"This is an invalid chain!!!: {chain}")
         return 0
 
-        # YOUR CODE HERE
     w3 = connect_to(chain)
     contract_data = get_contract_info(chain, contract_info)
     contract_address = Web3.to_checksum_address(contract_data['address'])
-    contract_abi = contract_data['abi']
+    contract_abi = contract_data['abi']     # ABI is already a list, not a filename
     contract = w3.eth.contract(address=contract_address, abi=contract_abi)
 
     latest_block = w3.eth.block_number
+    start_block = max(0, latest_block - 4)  # last 5 blocks
+
     events_list = []
-    # Scan the last 5 blocks, so from latest_block - 4 to latest_block inclusive
-    for block_num in range(latest_block - 4, latest_block + 1):
+
+    # Scan the last 5 blocks
+    for block_num in range(start_block, latest_block + 1):
         block = w3.eth.get_block(block_num, full_transactions=True)
+
         for tx in block.transactions:
             receipt = w3.eth.get_transaction_receipt(tx.hash)
 
-            #if chain is source, look for Deposit events
+            # If chain is source, look for Deposit events
             if chain == 'source':
                 deposit_events = contract.events.Deposit().process_receipt(receipt)
-                for event in deposit_events:
+                for ev in deposit_events:
                     event_data = {
-                        'event': event,
-                        'blockNumber': event.blockNumber,
-                        'transactionHash': event.transactionHash.hex(),
-                        'amount': event.args['amount'],
-                        'token': event.args['token'],
-                        'recepient': event.args['recipient'],
-                        'timestamp': datetime.fromtimestamp(block.timestamp)
+                        'event': 'Deposit',
+                        'blockNumber': ev.blockNumber,
+                        'transactionHash': ev.transactionHash.hex(),
+                        'amount': ev.args['amount'],
+                        'token': ev.args['token'],
+                        'recipient': ev.args['recipient'],
+                        'timestamp': datetime.fromtimestamp(block.timestamp),
                     }
                     events_list.append(event_data)
 
-            #if chain is destination, look for Unwrap events
+                    handle_deposits(ev, contract_info=contract_info)
+
+            # If chain is destination, look for Unwrap events
             elif chain == 'destination':
                 unwrap_events = contract.events.Unwrap().process_receipt(receipt)
-                for event in unwrap_events:
+                for ev in unwrap_events:
                     event_data = {
-                        'event': event,
-                        'blockNumber': event.blockNumber,
-                        'transactionHash': event.transactionHash.hex(),
-                        'amount': event.args['amount'],
-                        'token': event.args['token'],
-                        'recepient': event.args['recipient'],
-                        'timestamp': datetime.fromtimestamp(block.timestamp)
+                        'event': 'Unwrap',
+                        'blockNumber': ev.blockNumber,
+                        'transactionHash': ev.transactionHash.hex(),
+                        'amount': ev.args['amount'],
+                        'token': ev.args['token'],
+                        'recipient': ev.args['recipient'],
+                        'timestamp': datetime.fromtimestamp(block.timestamp),
                     }
                     events_list.append(event_data)
+
+                    handle_unwraps(ev, contract_info=contract_info)
 
     df = pd.DataFrame(events_list)
     return df
+
 
 def handle_deposits(event, contract_info="contract_info.json"):
     """
@@ -113,9 +124,9 @@ def handle_deposits(event, contract_info="contract_info.json"):
     nonce = w3_dest.eth.get_transaction_count(account_address)
 
     tx = contract_dest.functions.wrap(
-        event['args']['token'],
-        event['args']['recipient'],
-        event['args']['amount']
+        event.args['token'],
+        event.args['recipient'],
+        event.args['amount']
     ).build_transaction({
         'chainId': w3_dest.eth.chain_id,
         'gas': 2000000,
@@ -126,6 +137,7 @@ def handle_deposits(event, contract_info="contract_info.json"):
     signed_tx = w3_dest.eth.account.sign_transaction(tx, private_key=private_key)
     tx_hash = w3_dest.eth.send_raw_transaction(signed_tx.rawTransaction)
     print(f"Wrap transaction sent with hash: {tx_hash.hex()}")
+
 
 def handle_unwraps(event, contract_info="contract_info.json"):
     """
@@ -143,9 +155,9 @@ def handle_unwraps(event, contract_info="contract_info.json"):
     nonce = w3_source.eth.get_transaction_count(account_address)
 
     tx = contract_source.functions.withdraw(
-        event['args']['token'],
-        event['args']['recipient'],
-        event['args']['amount']
+        event.args['token'],
+        event.args['recipient'],
+        event.args['amount']
     ).build_transaction({
         'chainId': w3_source.eth.chain_id,
         'gas': 2000000,
