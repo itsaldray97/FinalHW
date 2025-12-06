@@ -7,8 +7,7 @@ CHAIN_ID = 97
 PRIVATE_KEY = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
 ACCOUNT = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
-# MUST MATCH WHAT AUTOGRADER EXPECTS
-DESTINATION_ADDRESS = "0xAB25d175fC33Ae9c0189736e189f98e798E578b2"
+DESTINATION_ADDRESS = "0x6D5150421e565A6ACD3987D849cCc3C194caC91D"
 
 UNDERLYING = [
     "0xc677c31AD31F73A5290f5ef067F8CEF8d301e45c",
@@ -22,6 +21,26 @@ with open("Destination.json") as f:
     abi = json.load(f)["abi"]
 
 destination = w3.eth.contract(address=DESTINATION_ADDRESS, abi=abi)
+
+# -----------------------------------------
+# ⭐ ROLE CHECK — IMPORTANT
+# -----------------------------------------
+default_admin = destination.functions.DEFAULT_ADMIN_ROLE().call()
+creator = destination.functions.CREATOR_ROLE().call()
+warden = destination.functions.WARDEN_ROLE().call()
+
+print("Has ADMIN:", destination.functions.hasRole(default_admin, ACCOUNT).call())
+print("Has CREATOR:", destination.functions.hasRole(creator, ACCOUNT).call())
+print("Has WARDEN:", destination.functions.hasRole(warden, ACCOUNT).call())
+
+for u in UNDERLYING:
+    wrapped = destination.functions.wrapped_tokens(u).call()
+    print("wrapped token for", u, "=", wrapped)
+
+print(destination.functions.wrapped_tokens(UNDERLYING[0]).call())
+
+# If any of these is False → STOP and tell me
+# -----------------------------------------
 
 def call_register(token, nonce):
     tx = destination.functions.registerToken(token).build_transaction({
