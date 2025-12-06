@@ -163,7 +163,6 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         for log in logs2:
             ev = contract.events.Wrap().process_log(log)
             wraps.append(ev)
-            print("EV IS:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + ev)
             events_list.append({
                 "event": "Wrap",
                 "block": ev.blockNumber,
@@ -217,23 +216,31 @@ def handle_deposits(events, contract_info="contract_info.json"):
 def handle_unwraps(events, contract_info="contract_info.json"):
     w3 = connect_to("source")
     cdata = get_contract_info("source", contract_info)
-    src = w3.eth.contract(address=Web3.to_checksum_address(cdata["address"]), abi=cdata["abi"])
+    src = w3.eth.contract(
+        address=Web3.to_checksum_address(cdata["address"]),
+        abi=cdata["abi"],
+    )
 
     key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
     sender = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
     nonce = w3.eth.get_transaction_count(sender)
 
+    # sort to keep deterministic ordering
     for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
-        token = ev.args["token"]
-        recipient = ev.args["recipient"]
+        underlying_token = ev.args["underlying_token"]
+        recipient = ev.args["to"]
         amount = ev.args["amount"]
 
-        tx = src.functions.withdraw(token, recipient, amount).build_transaction({
+        tx = src.functions.withdraw(
+            underlying_token,
+            recipient,
+            amount
+        ).build_transaction({
             "chainId": w3.eth.chain_id,
             "gas": 300000,
             "gasPrice": w3.to_wei("5", "gwei"),
-            "nonce": nonce
+            "nonce": nonce,
         })
 
         signed = w3.eth.account.sign_transaction(tx, key)
