@@ -8,7 +8,7 @@ PRIVATE_KEY = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c1
 ACCOUNT = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
 # MUST MATCH WHAT AUTOGRADER EXPECTS
-DESTINATION_ADDRESS = "0x5304Df8C40d25fA52478d916199abfaBFC8E220b"
+DESTINATION_ADDRESS = "0x97Abbc672045E53b28d36A0c5d53443fe4Ae2c6F"
 
 UNDERLYING = [
     "0xc677c31AD31F73A5290f5ef067F8CEF8d301e45c",
@@ -38,6 +38,7 @@ def call_register(token, nonce):
 
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     print("Status:", receipt.status)
+    print(receipt)
 
 nonce = w3.eth.get_transaction_count(ACCOUNT)
 
