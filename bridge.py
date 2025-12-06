@@ -68,10 +68,10 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     # ----- SOURCE: look for Deposit events and call wrap on destination -----
     if chain == 'source':
         # get_logs is cleaner than processing every tx receipt
-        deposit_events = contract.events.Deposit().get_logs(
-            fromBlock=from_block,
-            toBlock=to_block
-        )
+        deposit_events = contract.events.Deposit().getLogs({
+            "fromBlock": from_block,
+            "toBlock": to_block
+        })
 
         # Call wrap() on destination for each Deposit
         if deposit_events:
@@ -94,10 +94,10 @@ def scan_blocks(chain, contract_info="contract_info.json"):
 
     # ----- DESTINATION: look for Unwrap events and call withdraw on source -----
     else:  # chain == 'destination'
-        unwrap_events = contract.events.Unwrap().get_logs(
-            fromBlock=from_block,
-            toBlock=to_block
-        )
+        unwrap_events = contract.events.Unwrap().getLogs({
+            "fromBlock": from_block,
+            "toBlock": to_block
+        })
 
         # Call withdraw() on source for each Unwrap
         if unwrap_events:
