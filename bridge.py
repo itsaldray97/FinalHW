@@ -49,8 +49,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
         text="Deposit(address,address,uint256)"
     ).hex()
 
-    UNWRAP_TOPIC = "0x" + w3.keccak(
-        text="Unwrap(address,address,uint256)"
+    UNWRAP_TOPIC = w3.keccak(
+        text="Unwrap(address,address,address,address,uint256)"
     ).hex()
 
     WITHDRAWAL_TOPIC = "0x" + w3.keccak(
@@ -141,6 +141,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
                 "event": "Unwrap",
                 "block": ev.blockNumber,
                 "underlying_token": ev.args["underlying_token"],
+                "wrapped_token": ev.args["wrapped_token"],
+                "sender": ev.args["from"],
                 "to": ev.args["to"],
                 "amount": ev.args["amount"],
                 "tx": ev.transactionHash.hex(),
