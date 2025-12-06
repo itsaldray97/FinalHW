@@ -19,174 +19,169 @@ def connect_to(chain):
 
 
 def get_contract_info(chain, contract_info):
-    try:
-        with open(contract_info, 'r') as f:
-            contracts = json.load(f)
-    except Exception as e:
-        print(f"Failed to read contract info\n{e}")
-        return 0
-    return contracts[chain]
+    with open(contract_info, "r") as f:
+        return json.load(f)[chain]
 
 
+# ---------- MAIN EVENT SCANNER ----------
 def scan_blocks(chain, contract_info="contract_info.json"):
-    if chain not in ['source', 'destination']:
-        print(f"This is an invalid chain!!!: {chain}")
+    if chain not in ["source", "destination"]:
         return 0
 
     w3 = connect_to(chain)
-    contract_data = get_contract_info(chain, contract_info)
-    contract_address = Web3.to_checksum_address(contract_data['address'])
-    contract_abi = contract_data['abi']
-    contract = w3.eth.contract(address=contract_address, abi=contract_abi)
+    cdata = get_contract_info(chain, contract_info)
+    address = Web3.to_checksum_address(cdata["address"])
+    abi = cdata["abi"]
 
+    contract = w3.eth.contract(address=address, abi=abi)
 
-    latest_block = w3.eth.block_number
-    from_block = max(latest_block - 10, 0)
-    to_block = latest_block
+    latest = w3.eth.block_number
+    from_block = max(latest - 15, 0)
+    to_block = latest
 
     events_list = []
+    block_ts_cache = {}
 
+    def ts(blocknum):
+        if blocknum not in block_ts_cache:
+            block_ts_cache[blocknum] = w3.eth.get_block(blocknum).timestamp
+        return datetime.fromtimestamp(block_ts_cache[blocknum])
 
-    block_timestamps = {}
+    # Correct event signatures
+    DEPOSIT_TOPIC = w3.keccak(text="Deposit(address,address,address,uint256)").hex()
+    UNWRAP_TOPIC = w3.keccak(text="Unwrap(address,address,uint256)").hex()
 
-    def get_event_timestamp(block_num):
-        if block_num not in block_timestamps:
-
-            block_timestamps[block_num] = w3.eth.get_block(block_num).timestamp
-        return datetime.fromtimestamp(block_timestamps[block_num])
-
-    deposit_topic = "0x" + w3.keccak(text="Deposit(address,address,uint256)").hex()
-    unwrap_topic = "0x" + w3.keccak(text="Unwrap(address,address,uint256)").hex()
-
+    # ============================================================
+    #                SOURCE CHAIN → WRAP() CALL
+    # ============================================================
     if chain == "source":
         logs = w3.eth.get_logs({
             "fromBlock": from_block,
             "toBlock": to_block,
-            "address": contract_address,
-            "topics": [unwrap_topic]
+            "address": address,
+            "topics": [DEPOSIT_TOPIC]
         })
 
-        deposit_events = []
-
+        events = []
         for log in logs:
-            event = contract.events.Deposit().process_log(log)
-            deposit_events.append(event)
+            ev = contract.events.Deposit().process_log(log)
+            args = ev["args"]
+            events.append(ev)
 
             events_list.append({
                 "event": "Deposit",
-                "blockNumber": event.blockNumber,
-                "transactionHash": event.transactionHash.hex(),
-                "amount": event.args["amount"],
-                "token": event.args["token"],
-                "recepient": event.args["recipient"],
-                "timestamp": get_event_timestamp(event.blockNumber)  # Used optimized function
+                "blockNumber": ev.blockNumber,
+                "transactionHash": ev.transactionHash.hex(),
+                "token": args["token"],
+                "recipient": args["recipient"],
+                "amount": args["amount"],
+                "timestamp": ts(ev.blockNumber)
             })
 
-        if deposit_events:
-            handle_deposits(deposit_events, contract_info)
+        if events:
+            handle_deposits(events, contract_info)
 
-    elif chain == "destination":
+    # ============================================================
+    #               DESTINATION CHAIN → WITHDRAW() CALL
+    # ============================================================
+    else:  # destination chain
         logs = w3.eth.get_logs({
-            "fromBlock": hex(from_block),
-            "toBlock": hex(to_block),
-            "address": contract_address,
-            "topics": [unwrap_topic]
+            "fromBlock": from_block,
+            "toBlock": to_block,
+            "address": address,
+            "topics": [UNWRAP_TOPIC]
         })
 
-        unwrap_events = []
-
+        events = []
         for log in logs:
-            event = contract.events.Unwrap().process_log(log)
-            unwrap_events.append(event)
+            ev = contract.events.Unwrap().process_log(log)
+            args = ev["args"]
+            events.append(ev)
 
             events_list.append({
                 "event": "Unwrap",
-                "blockNumber": event.blockNumber,
-                "transactionHash": event.transactionHash.hex(),
-                "amount": event.args["amount"],
-                "underlying_token": event.args["underlying_token"],
-                "to": event.args["to"],
-                "timestamp": get_event_timestamp(event.blockNumber)  # Used optimized function
+                "blockNumber": ev.blockNumber,
+                "transactionHash": ev.transactionHash.hex(),
+                "amount": args["amount"],
+                "underlying_token": args["underlying_token"],
+                "to": args["to"],
+                "timestamp": ts(ev.blockNumber)
             })
 
-        if unwrap_events:
-            handle_unwraps(unwrap_events, contract_info)
+        if events:
+            handle_unwraps(events, contract_info)
 
-    df = pd.DataFrame(events_list)
-    return df
+    return pd.DataFrame(events_list)
 
 
+# --------------------------------------------------------------
+#                  HANDLE DEPOSITS → WRAP()
+# --------------------------------------------------------------
 def handle_deposits(events, contract_info="contract_info.json"):
-    w3_dest = connect_to('destination')
-    contract_data_dest = get_contract_info('destination', contract_info)
-    contract_address_dest = Web3.to_checksum_address(contract_data_dest['address'])
-    contract_abi_dest = contract_data_dest['abi']
-    contract_dest = w3_dest.eth.contract(address=contract_address_dest, abi=contract_abi_dest)
+    w3_dest = connect_to("destination")
+    cdata = get_contract_info("destination", contract_info)
+    dest_contract = w3_dest.eth.contract(
+        address=Web3.to_checksum_address(cdata["address"]),
+        abi=cdata["abi"]
+    )
 
     private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
-    account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
+    account = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
-    nonce = w3_dest.eth.get_transaction_count(account_address)
+    nonce = w3_dest.eth.get_transaction_count(account)
 
-    # IMPORTANT: process events in deterministic order
+    # Process in deterministic order
     for ev in sorted(events, key=lambda e: e.blockNumber):
-        args = ev['args']
+        args = ev["args"]
 
-        # Adjust these names to **match your event ABI**
-        underlying_token = args['underlying_token']
-        recipient = args['to']
-        amount = args['amount']
+        token = args["token"]
+        recipient = args["recipient"]
+        amount = args["amount"]
 
-        tx = contract_dest.functions.wrap(
-            underlying_token,
-            recipient,
-            amount
-        ).build_transaction({
-            'chainId': w3_dest.eth.chain_id,
-            'gas': 2000000,
-            'gasPrice': w3_dest.to_wei('5', 'gwei'),
-            'nonce': nonce,
+        tx = dest_contract.functions.wrap(token, recipient, amount).build_transaction({
+            "chainId": w3_dest.eth.chain_id,
+            "gas": 300000,
+            "gasPrice": w3_dest.to_wei("5", "gwei"),
+            "nonce": nonce
         })
 
-        signed_tx = w3_dest.eth.account.sign_transaction(tx, private_key=private_key)
-        tx_hash = w3_dest.eth.send_raw_transaction(signed_tx.raw_transaction)
-        print(f"Wrap transaction sent with hash: {tx_hash.hex()}")
-
+        signed = w3_dest.eth.account.sign_transaction(tx, private_key)
+        tx_hash = w3_dest.eth.send_raw_transaction(signed.raw_transaction)
+        print("Wrap transaction:", tx_hash.hex())
         nonce += 1
 
 
-
+# --------------------------------------------------------------
+#                HANDLE UNWRAPS → WITHDRAW()
+# --------------------------------------------------------------
 def handle_unwraps(events, contract_info="contract_info.json"):
-    w3_source = connect_to('source')
-    contract_data_source = get_contract_info('source', contract_info)
-    contract_address_source = Web3.to_checksum_address(contract_data_source['address'])
-    contract_abi_source = contract_data_source['abi']
-    contract_source = w3_source.eth.contract(address=contract_address_source, abi=contract_abi_source)
+    w3_src = connect_to("source")
+    cdata = get_contract_info("source", contract_info)
+    src_contract = w3_src.eth.contract(
+        address=Web3.to_checksum_address(cdata["address"]),
+        abi=cdata["abi"]
+    )
 
     private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
-    account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
+    account = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
-    nonce = w3_source.eth.get_transaction_count(account_address)
+    nonce = w3_src.eth.get_transaction_count(account)
 
     for ev in events:
-        args = ev['args']
-        underlying_token = args['underlying_token']
-        recipient = args['to']
-        amount = args['amount']
+        args = ev["args"]
 
-        tx = contract_source.functions.withdraw(
-            underlying_token,
-            recipient,
-            amount
-        ).build_transaction({
-            'chainId': w3_source.eth.chain_id,
-            'gas': 2000000,
-            'gasPrice': w3_source.to_wei('5', 'gwei'),
-            'nonce': nonce,
+        underlying = args["underlying_token"]
+        recipient = args["to"]
+        amount = args["amount"]
+
+        tx = src_contract.functions.withdraw(underlying, recipient, amount).build_transaction({
+            "chainId": w3_src.eth.chain_id,
+            "gas": 300000,
+            "gasPrice": w3_src.to_wei("5", "gwei"),
+            "nonce": nonce
         })
 
-        signed_tx = w3_source.eth.account.sign_transaction(tx, private_key=private_key)
-        tx_hash = w3_source.eth.send_raw_transaction(signed_tx.raw_transaction)
-        print(f"Withdraw transaction sent with hash: {tx_hash.hex()}")
-
+        signed = w3_src.eth.account.sign_transaction(tx, private_key)
+        tx_hash = w3_src.eth.send_raw_transaction(signed.raw_transaction)
+        print("Withdraw transaction:", tx_hash.hex())
         nonce += 1
