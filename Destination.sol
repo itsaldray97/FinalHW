@@ -45,19 +45,35 @@ contract Destination is AccessControl {
 		emit Unwrap(underlyingAddress, _wrapped_token, msg.sender, _recipient, _amount);
 	}
 
-	function createToken(address _underlying_token, string memory name, string memory symbol ) public onlyRole(CREATOR_ROLE) returns(address) {
-		//YOUR CODE HERE
-		require(_underlying_token != address(0), "Invalid underlying token");
-		require(wrapped_tokens[_underlying_token] == address(0), ")Token already exists");
-		string memory underlyingName = ERC20(_underlying_token).name();
-		string memory underlyingSymbol = ERC20(_underlying_token).symbol();
-		BridgeToken Token = new BridgeToken(_underlying_token, underlyingName, underlyingSymbol, address (this));
-		wrapped_tokens[_underlying_token] = address(Token);
-		underlying_tokens[address(Token)] = _underlying_token;
-		tokens.push(_underlying_token);
-		emit Creation(_underlying_token, address(Token));
-		return address(Token);
-	}
+	function createToken(address _underlying_token, string memory name, string memory symbol )
+    public
+    onlyRole(CREATOR_ROLE)
+    returns(address)
+{
+    require(_underlying_token != address(0), "Invalid underlying token");
+    require(wrapped_tokens[_underlying_token] == address(0), "Token already exists");
+
+    // Read metadata from underlying ERC20
+    string memory underlyingName = ERC20(_underlying_token).name();
+    string memory underlyingSymbol = ERC20(_underlying_token).symbol();
+
+    // Correct constructor args:
+    // 1. owner     → admin (DEFAULT_ADMIN_ROLE)
+    // 2. source    → this Destination contract
+    // 3. underlying→ the real token
+    BridgeToken token = new BridgeToken(
+        msg.sender,        // owner of wrapped token
+        address(this),     // source (bridge)
+        _underlying_token  // underlying ERC20
+    );
+
+    wrapped_tokens[_underlying_token] = address(token);
+    underlying_tokens[address(token)] = _underlying_token;
+    tokens.push(_underlying_token);
+
+    emit Creation(_underlying_token, address(token));
+    return address(token);
+}
 
 }
 
