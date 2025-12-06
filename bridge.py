@@ -72,6 +72,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     unwrap_topic = "0x" + w3.keccak(text="Unwrap(address,address,uint256)").hex()
 
     if chain == "source":
+
         logs = w3.eth.get_logs({
             "fromBlock": hex(from_block),
             "toBlock": hex(to_block),
@@ -79,8 +80,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             "topics": [deposit_topic]
         })
 
+        deposit_events = []
+
         for log in logs:
             event = contract.events.Deposit().process_log(log)
+            deposit_events.append(event)  # Store the processed event structure for handling
+
+            # Append log details to events_list for the DataFrame
             events_list.append({
                 "event": "Deposit",
                 "blockNumber": event.blockNumber,
@@ -91,7 +97,11 @@ def scan_blocks(chain, contract_info="contract_info.json"):
                 "timestamp": datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
             })
 
+        if deposit_events:
+            handle_deposits(deposit_events, contract_info)
+
     elif chain == "destination":
+        # Get Unwrap logs
         logs = w3.eth.get_logs({
             "fromBlock": hex(from_block),
             "toBlock": hex(to_block),
@@ -99,8 +109,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             "topics": [unwrap_topic]
         })
 
+        unwrap_events = []  # Store processed events to pass to handler
+
         for log in logs:
             event = contract.events.Unwrap().process_log(log)
+            unwrap_events.append(event)
+
+            # Append log details to events_list for the DataFrame
             events_list.append({
                 "event": "Unwrap",
                 "blockNumber": event.blockNumber,
@@ -108,34 +123,13 @@ def scan_blocks(chain, contract_info="contract_info.json"):
                 "amount": event.args["amount"],
                 "token": event.args["token"],
                 "recepient": event.args["recipient"],
+                "amount": event.args["amount"],
+                "underlying_token": event.args["underlying_token"],
+                "recipient": event.args["to"],  # Using 'to' for recipient
                 "timestamp": datetime.fromtimestamp(w3.eth.get_block(event.blockNumber).timestamp)
             })
-
-    # ----- DESTINATION: look for Unwrap events and call withdraw on source -----
-    else:  # chain == 'destination'
-        unwrap_events = contract.events.Unwrap().getLogs({
-            "fromBlock": from_block,
-            "toBlock": to_block
-        })
-
-        # Call withdraw() on source for each Unwrap
         if unwrap_events:
             handle_unwraps(unwrap_events, contract_info)
-
-        for ev in unwrap_events:
-            args = ev['args']
-            events_list.append({
-                'event': 'Unwrap',
-                'blockNumber': ev['blockNumber'],
-                'transactionHash': ev['transactionHash'].hex(),
-                'underlying_token': args['underlying_token'],
-                'wrapped_token': args['wrapped_token'],
-                'to': args['to'],
-                'amount': args['amount'],
-                'timestamp': datetime.fromtimestamp(
-                    w3.eth.get_block(ev['blockNumber']).timestamp
-                )
-            })
 
     df = pd.DataFrame(events_list)
     return df
