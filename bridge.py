@@ -46,9 +46,8 @@ def scan_blocks(chain, contract_info="contract_info.json"):
             block_ts[blocknum] = w3.eth.get_block(blocknum).timestamp
         return datetime.fromtimestamp(block_ts[blocknum])
 
-    # CORRECT topic signatures
     DEPOSIT_TOPIC = "0x" + w3.keccak(
-        text="Deposit(address,address,address,uint256)"
+        text="Deposit(address,address,uint256)"
     ).hex()
 
     UNWRAP_TOPIC = "0x" + w3.keccak(
