@@ -218,7 +218,7 @@ def handle_unwraps(events, contract_info="contract_info.json"):
     cdata = get_contract_info("source", contract_info)
     src = w3.eth.contract(
         address=Web3.to_checksum_address(cdata["address"]),
-        abi=cdata["abi"],
+        abi=cdata["abi"]
     )
 
     key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
@@ -226,8 +226,9 @@ def handle_unwraps(events, contract_info="contract_info.json"):
 
     nonce = w3.eth.get_transaction_count(sender)
 
-    # sort to keep deterministic ordering
     for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
+
+
         underlying_token = ev.args["underlying_token"]
         recipient = ev.args["to"]
         amount = ev.args["amount"]
@@ -246,6 +247,7 @@ def handle_unwraps(events, contract_info="contract_info.json"):
         signed = w3.eth.account.sign_transaction(tx, key)
         tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
         print("Withdraw:", tx_hash.hex())
+
         nonce += 1
 
 
