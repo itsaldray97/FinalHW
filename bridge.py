@@ -224,8 +224,8 @@ def handle_unwraps(events, contract_info="contract_info.json"):
     nonce = w3.eth.get_transaction_count(sender)
 
     for ev in sorted(events, key=lambda e: (e.blockNumber, e.logIndex)):
-        token = ev.args["underlying_token"]
-        recipient = ev.args["to"]
+        token = ev.args["token"]
+        recipient = ev.args["recipient"]
         amount = ev.args["amount"]
 
         tx = src.functions.withdraw(token, recipient, amount).build_transaction({
