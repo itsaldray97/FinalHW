@@ -4,7 +4,7 @@ import json
 # -------------------------------
 # CONFIG
 # -------------------------------
-RPC = "https://api.avax-test.network/ext/bc/C/rpc"   # Avalanche Fuji
+RPC = "https://bsc-testnet.publicnode.com"
 CHAIN_ID = 43113
 
 PRIVATE_KEY = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
@@ -49,7 +49,6 @@ tx = destination.functions.createToken(
     "nonce": nonce,
     "gas": 3_000_000,
     "gasPrice": w3.eth.gas_price,
-    "chainId": CHAIN_ID,
 })
 
 # -------------------------------

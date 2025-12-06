@@ -53,8 +53,7 @@ def scan_blocks(chain, contract_info="contract_info.json"):
     w3 = connect_to(chain)
     contract_data = get_contract_info(chain, contract_info)
     contract_address = Web3.to_checksum_address(contract_data['address'])
-    with open(contract_data['abi'], 'r') as abi_file:
-        contract_abi = json.load(abi_file)
+    contract_abi = contract_data['abi']
     contract = w3.eth.contract(address=contract_address, abi=contract_abi)
 
     latest_block = w3.eth.block_number
@@ -105,9 +104,8 @@ def handle_deposits(event, contract_info="contract_info.json"):
     w3_dest = connect_to('destination')
     contract_data_dest = get_contract_info('destination', contract_info)
     contract_address_dest = Web3.to_checksum_address(contract_data_dest['address'])
-    with open(contract_data_dest['abi'], 'r') as abi_file:
-        contract_abi_dest = json.load(abi_file)
-    contract_dest = w3_dest.eth.contract(address=contract_address_dest, abi=contract_abi_dest)
+    contract_abi = contract_data_dest['abi']
+    contract_dest = w3_dest.eth.contract(address=contract_address_dest, abi=contract_abi)
 
     private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
     account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
@@ -136,9 +134,8 @@ def handle_unwraps(event, contract_info="contract_info.json"):
     w3_source = connect_to('source')
     contract_data_source = get_contract_info('source', contract_info)
     contract_address_source = Web3.to_checksum_address(contract_data_source['address'])
-    with open(contract_data_source['abi'], 'r') as abi_file:
-        contract_abi_source = json.load(abi_file)
-    contract_source = w3_source.eth.contract(address=contract_address_source, abi=contract_abi_source)
+    contract_abi = contract_data_source['abi']
+    contract_source = w3_source.eth.contract(address=contract_address_source, abi=contract_abi)
 
     private_key = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
     account_address = "0xB7131d4417d84025BAD139949D183398c2cf0916"
