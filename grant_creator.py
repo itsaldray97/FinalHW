@@ -5,7 +5,7 @@ RPC = "https://bsc-testnet-rpc.publicnode.com"   # BNB testnet RPC
 PRIVATE_KEY = "0x6608bee2f462fa92b53bf52acb0ebfab6e8597ac618059d028f07b4f08023c16"
 ACCOUNT = "0xB7131d4417d84025BAD139949D183398c2cf0916"
 
-DESTINATION = "0x97Abbc672045E53b28d36A0c5d53443fe4Ae2c6F"
+DESTINATION = "0xAB25d175fC33Ae9c0189736e189f98e798E578b2"
 
 # Load ABI
 with open("Destination.json") as f:
