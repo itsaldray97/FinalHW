@@ -90,8 +90,17 @@ def scan_blocks(chain, contract_info="contract_info.json"):
                 ]
             })
         except Exception as e:
-            print("No unwrap events or RPC limit reached:", e)
-            return pd.DataFrame([])
+
+            try:
+                logs = w3.eth.get_logs({
+                    "fromBlock": to_block,
+                    "toBlock": to_block,
+                    "address": contract_address,
+                    "topics": [UNWRAP_TOPIC]
+                })
+            except Exception as e2:
+                print("Retry still failed. Proceeding WITHOUT logs.", e2)
+                logs = []
 
         unwrap_events = []
 
