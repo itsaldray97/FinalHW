@@ -25,91 +25,75 @@ def get_contract_info(chain, contract_info):
 
 # ---------- MAIN EVENT SCANNER ----------
 def scan_blocks(chain, contract_info="contract_info.json"):
-    if chain not in ["source", "destination"]:
+    if chain not in ['source', 'destination']:
         return 0
 
     w3 = connect_to(chain)
     cdata = get_contract_info(chain, contract_info)
-    address = Web3.to_checksum_address(cdata["address"])
-    abi = cdata["abi"]
-
-    contract = w3.eth.contract(address=address, abi=abi)
+    contract_address = Web3.to_checksum_address(cdata['address'])
+    contract_abi = cdata['abi']
+    contract = w3.eth.contract(address=contract_address, abi=contract_abi)
 
     latest = w3.eth.block_number
-    from_block = max(latest - 15, 0)
+    from_block = max(latest - 20, 0)
     to_block = latest
 
     events_list = []
-    block_ts_cache = {}
+    block_ts = {}
 
     def ts(blocknum):
-        if blocknum not in block_ts_cache:
-            block_ts_cache[blocknum] = w3.eth.get_block(blocknum).timestamp
-        return datetime.fromtimestamp(block_ts_cache[blocknum])
+        if blocknum not in block_ts:
+            block_ts[blocknum] = w3.eth.get_block(blocknum).timestamp
+        return datetime.fromtimestamp(block_ts[blocknum])
 
-    # Correct event signatures
-    DEPOSIT_TOPIC = "0x" + w3.keccak(text="Deposit(address,address,address,uint256)").hex()
-    UNWRAP_TOPIC = "0x" + w3.keccak(text="Unwrap(address,address,uint256)").hex()
+    # CORRECT topic signatures
+    DEPOSIT_TOPIC = "0x" + w3.keccak(
+        text="Deposit(address,address,address,uint256)"
+    ).hex()
+
+    UNWRAP_TOPIC = "0x" + w3.keccak(
+        text="Unwrap(address,address,uint256)"
+    ).hex()
 
     # ============================================================
-    #                SOURCE CHAIN → WRAP() CALL
+    #                SOURCE CHAIN – detect DEPOSITS
     # ============================================================
-    if chain == "source":
+    if chain == 'source':
         logs = w3.eth.get_logs({
             "fromBlock": from_block,
             "toBlock": to_block,
-            "address": address,
-            "topics": [DEPOSIT_TOPIC]
+            "address": contract_address,
+            "topics": [DEPOSIT_TOPIC]     # ✔ FIXED
         })
 
-        events = []
+        deposit_events = []
+
         for log in logs:
             ev = contract.events.Deposit().process_log(log)
-            args = ev["args"]
-            events.append(ev)
+            deposit_events.append(ev)
 
-            events_list.append({
-                "event": "Deposit",
-                "blockNumber": ev.blockNumber,
-                "transactionHash": ev.transactionHash.hex(),
-                "token": args["token"],
-                "recipient": args["recipient"],
-                "amount": args["amount"],
-                "timestamp": ts(ev.blockNumber)
-            })
-
-        if events:
-            handle_deposits(events, contract_info)
+        if deposit_events:
+            handle_deposits(deposit_events, contract_info)
 
     # ============================================================
-    #               DESTINATION CHAIN → WITHDRAW() CALL
+    #                DESTINATION CHAIN – detect UNWRAPS
     # ============================================================
-    else:  # destination chain
+    else:
         logs = w3.eth.get_logs({
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "address": address,
+            "fromBlock": from_block,      # ✔ FIXED
+            "toBlock": to_block,          # ✔ FIXED
+            "address": contract_address,
             "topics": [UNWRAP_TOPIC]
         })
 
-        events = []
+        unwrap_events = []
+
         for log in logs:
             ev = contract.events.Unwrap().process_log(log)
-            args = ev["args"]
-            events.append(ev)
+            unwrap_events.append(ev)
 
-            events_list.append({
-                "event": "Unwrap",
-                "blockNumber": ev.blockNumber,
-                "transactionHash": ev.transactionHash.hex(),
-                "amount": args["amount"],
-                "underlying_token": args["underlying_token"],
-                "to": args["to"],
-                "timestamp": ts(ev.blockNumber)
-            })
-
-        if events:
-            handle_unwraps(events, contract_info)
+        if unwrap_events:
+            handle_unwraps(unwrap_events, contract_info)
 
     return pd.DataFrame(events_list)
 
